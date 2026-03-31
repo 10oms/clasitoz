@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title><%= stock.name %> · Details</title>
+  <link rel="stylesheet" href="/styles.css">
+
+  <!-- ✅ CHART LIB -->
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+  <div class="app-header">
+    <a href="/" style="text-decoration:none;color:var(--primary);font-weight:700;margin-right:12px">← Back</a>
+    <div class="app-title"><%= stock.name %></div>
+  </div>
+
+  <main style="max-width:1100px;margin:18px auto;padding:0 16px">
+    <div class="stock-detail-header">
+      <div class="logo-circle"><%= stock.symbol %></div>
+      <div style="flex:1">
+        <div class="detail-name">
+          <%= stock.name %>
+          <span style="font-weight:700;color:#94a3b8;font-size:13px">
+            (<%= stock.symbol %>)
+          </span>
+        </div>
+
+        <div class="detail-price">
+          ₹<%= stock.price.toFixed(2) %>
+          <span class="stock-change <%= stock.change>=0 ? 'up' : 'down' %>" style="font-size:14px;margin-left:10px">
+            <%= stock.change >=0? '+' : '' %><%= stock.change %> (<%= stock.changePercent %>%)
+          </span>
+        </div>
+
+        <div class="timeframe" style="margin-top:6px">
+          <button class="tf-btn active">LIVE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ CHART -->
+    <div class="chart-card" style="margin-top:14px">
+      <div id="chart" style="width:100%;height:350px;"></div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn sell">Sell</button>
+      <button class="btn buy">Buy</button>
+    </div>
+
+    <div class="tabs" style="margin-top:18px">
+      <div class="tab active">Overview</div>
+      <div class="tab">News</div>
+      <div class="tab">Events</div>
+      <div class="tab">F&O</div>
+    </div>
+  </main>
+
+<script>
+const symbol = "<%= stock.symbol %>";
+const chartContainer = document.getElementById('chart');
+
+// 🔥 CREATE CHART
+const chart = LightweightCharts.createChart(chartContainer, {
+  width: chartContainer.clientWidth,
+  height: 350,
+  layout: {
+    background: { color: '#000' },
+    textColor: '#fff'
+  },
+  grid: {
+    vertLines: { color: '#222' },
+    horzLines: { color: '#222' }
+  }
+});
+
+// 🔥 SERIES
+const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries);
+
+// =========================
+// 🔥 INITIAL LOAD
+// =========================
+let initialized = false;
+
+async function initChart() {
+  try {
+    const res = await fetch('/candles/' + symbol);
+    const data = await res.json();
+
+    if (!data || data.length === 0) return;
+
+    const formatted = data.map(c => ({
+      time: Math.floor(c.time / 1000),
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close
+    }));
+
+    candleSeries.setData(formatted);
+    initialized = true;
+
+  } catch (err) {
+    console.error("Init error:", err);
+  }
+}
+
+// =========================
+// 🔄 REAL-TIME UPDATE
+// =========================
+async function updateChart() {
+  try {
+    if (!initialized) return;
+
+    const res = await fetch('/candles/' + symbol);
+    const data = await res.json();
+
+    if (!data || data.length === 0) return;
+
+    const last = data[data.length - 1];
+
+    const candle = {
+      time: Math.floor(last.time / 1000),
+      open: last.open,
+      high: last.high,
+      low: last.low,
+      close: last.close
+    };
+
+    // 🔥 THIS MAKES IT MOVE
+    candleSeries.update(candle);
+
+  } catch (err) {
+    console.error("Update error:", err);
+  }
+}
+
+// 🚀 START
+initChart();
+setInterval(updateChart, 2000);
+
+// 📱 RESPONSIVE FIX
+window.addEventListener('resize', () => {
+  chart.applyOptions({
+    width: chartContainer.clientWidth
+  });
+});
+</script>
+
+</body>
+</html>

@@ -1,41 +1,218 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Trading Platform (No API)</title>
-  <link rel="stylesheet" href="/style.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trading Platform</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 </head>
+
 <body>
-  <h1>📈 Simulated Trading Dashboard</h1>
 
-  <h2>Auto-Redeem Trigger</h2>
-  <form action="/price-trigger" method="POST">
-    <input type="text" name="stockSymbol" placeholder="Stock Symbol" required>
-    <input type="number" name="currentPrice" placeholder="Current Price" required>
-    <input type="number" name="targetPrice" placeholder="Target Price" required>
-    <button type="submit">Set Auto-Redeem</button>
-  </form>
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="app-title">CLASITOZ</div>
 
-  <h2>Scheduled Buy Order</h2>
-  <form action="/schedule-buy" method="POST">
-    <input type="text" name="stockSymbol" placeholder="Stock Symbol" required>
-    <input type="datetime-local" name="scheduleDateTime" required>
-    <button type="submit">Schedule Buy</button>
-  </form>
+    <div class="header-actions">
+      <div id="user-btn" class="user-icon">👤</div>
+    </div>
+  </div>
 
-  <hr>
+  <!-- Search -->
+  <div class="search-bar-wrap">
+    <div class="search-inner">
+      <div class="search-input">
+        <input id="search-input" type="search" placeholder="Search stocks..." />
+      </div>
 
-  <h3>Active Price Triggers</h3>
-  <ul>
-    <% triggers.forEach(t => { %>
-      <li><%= t.stockSymbol %> | Current: ₹<%= t.currentPrice %> → Target: ₹<%= t.targetPrice %></li>
-    <% }) %>
-  </ul>
+      <div class="search-select">
+        <select id="sector-filter">
+          <option value="all">All Sectors</option>
+          <option value="it">IT</option>
+          <option value="banking">Banking</option>
+          <option value="energy">Energy</option>
+        </select>
+      </div>
+    </div>
+  </div>
 
-  <h3>Scheduled Buys</h3>
-  <ul>
-    <% scheduled.forEach(s => { %>
-      <li><%= s.stockSymbol %> at <%= s.scheduleDateTime.toLocaleString() %></li>
-    <% }) %>
-  </ul>
+  <main class="container">
+
+    <!-- LEFT SIDE -->
+    <section class="left-column">
+
+      <!-- ACTIONS -->
+      <div class="trading-actions">
+
+        <form action="/add-trigger" method="POST" class="action-form">
+          <input name="stock" placeholder="Stock" required>
+          <input name="targetPrice" type="number" placeholder="Target ₹" required>
+          <input name="quantity" type="number" placeholder="Qty" required>
+
+          <select name="action">
+            <option value="BUY">BUY</option>
+            <option value="SELL">SELL</option>
+          </select>
+
+          <button>🎯 Set</button>
+        </form>
+
+        <form action="/add-schedule" method="POST" class="action-form">
+          <input name="stock" placeholder="Stock" required>
+          <input name="scheduledTime" type="datetime-local" required>
+          <input name="quantity" type="number" placeholder="Qty" required>
+
+          <select name="action">
+            <option value="BUY">BUY</option>
+            <option value="SELL">SELL</option>
+          </select>
+
+          <button>🛒 Schedule</button>
+        </form>
+
+      </div>
+
+      <!-- STOCK LIST -->
+      <div class="stock-grid" id="stock-list">
+        <% stocks.forEach(stock => { %>
+          <div class="stock-card"
+               data-name="<%= stock.name.toLowerCase() %>"
+               data-sector="<%= stock.sector %>"
+               data-symbol="<%= stock.symbol %>">
+
+            <div class="stock-top">
+              <div>
+                <div class="stock-name"><%= stock.name %></div>
+                <div class="stock-symbol"><%= stock.symbol %></div>
+              </div>
+              <div class="stock-price">₹<%= stock.price.toFixed(2) %></div>
+            </div>
+
+            <div class="stock-meta">
+              <div class="stock-change <%= stock.change >= 0 ? 'up' : 'down' %>">
+                <%= stock.change >=0 ? '+' : '' %><%= stock.change %>
+              </div>
+
+              <div style="margin-left:auto; display:flex; gap:6px;">
+                <button class="buy-btn" data-symbol="<%= stock.symbol %>">Buy</button>
+                <button class="sell-btn" data-symbol="<%= stock.symbol %>">Sell</button>
+                <button class="watch-btn" data-symbol="<%= stock.symbol %>">⭐</button>
+              </div>
+            </div>
+
+          </div>
+        <% }) %>
+      </div>
+
+      <!-- PORTFOLIO -->
+      <div class="card">
+        <h3>💰 Portfolio</h3>
+        <div id="portfolio-container">
+          <div class="empty-state">Loading portfolio...</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT SIDE -->
+    <aside class="right-column">
+
+      <div class="card">
+        <h3>⭐ Watchlist</h3>
+        <div id="watchlist-container">
+          <div class="empty-state">Loading watchlist...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🎯 Triggers</h3>
+        <% if (triggers.length === 0) { %>
+          <div class="empty-state">No triggers</div>
+        <% } else { %>
+          <ul>
+            <% triggers.forEach(t => { %>
+              <li>
+                <span><%= t.stock %> @ ₹<%= t.targetPrice %></span>
+                <button class="delete-trigger" data-id="<%= t._id %>">❌</button>
+              </li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <h3>🛒 Scheduled</h3>
+        <% if (scheduled.length === 0) { %>
+          <div class="empty-state">No scheduled orders</div>
+        <% } else { %>
+          <ul>
+            <% scheduled.forEach(s => { %>
+              <li><%= s.stock %> at <%= s.scheduledTime.toLocaleString() %></li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </div>
+
+      <div class="card">
+        <h3>📜 Order History</h3>
+        <div id="orders-container">
+          <div class="empty-state">Loading orders...</div>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- OVERLAY -->
+  <div id="overlay" class="overlay"></div>
+
+  <!-- SIDE PANEL -->
+  <div id="side-panel" class="side-panel">
+
+    <div class="panel-header">
+      <h3>👤 Account</h3>
+      <button id="close-panel">✖</button>
+    </div>
+
+    <div class="panel-content">
+
+      <!-- ✅ FIXED POSITION -->
+      <p><strong>User:</strong> <span id="panel-username">Guest</span></p>
+
+      <p><strong>Balance:</strong>
+        <span id="panel-balance" style="
+          font-size:22px;
+          font-weight:700;
+          color:darkgreen;
+          display:block;
+          margin-top:6px;
+        ">
+          ₹0.00
+        </span>
+      </p>
+
+      <hr>
+
+      <input id="username" placeholder="Username">
+      <input id="password" type="password" placeholder="Password">
+
+      <button onclick="register()">Register</button>
+      <button onclick="login()">Login</button>
+
+      <hr>
+
+      <input id="amount-input" type="number" placeholder="Enter amount">
+
+      <button onclick="depositMoney()">💰 Deposit</button>
+      <button onclick="withdrawMoney()">💸 Withdraw</button>
+
+    </div>
+
+  </div>
+
+  <script src="/js/search.js"></script>
+  <script src="/js/script.js"></script>
+
 </body>
 </html>
