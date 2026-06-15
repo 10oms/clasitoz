@@ -149,23 +149,27 @@ async function loadWatchlist() {
     const container = document.getElementById("watchlist-container");
     if (!container) return;
 
-    if (!data.length) {
+    if (!Array.isArray(data) || data.length === 0) {
       container.innerHTML = `<div class="empty-state">No watchlist</div>`;
       return;
     }
 
     container.innerHTML = data.map(item => `
       <li style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-weight:600;">${item.stock}</span>
-        <span style="color:#00ffae;font-weight:700;">₹${item.price.toFixed(2)}</span>
+        <span style="font-weight:600;">${item.stock || 'N/A'}</span>
+        <span style="color:#00ffae;font-weight:700;">
+          ₹${Number(item.price || 0).toFixed(2)}
+        </span>
         <button onclick="removeFromWatchlist('${item.stock}')">❌</button>
       </li>
     `).join('');
 
   } catch (err) {
-    console.error(err);
+    console.error("Watchlist error:", err);
   }
 }
+const data = await res.json();
+console.log("WATCHLIST DATA:", data);
 
 async function removeFromWatchlist(stock) {
   await fetch('/watchlist/remove', {
